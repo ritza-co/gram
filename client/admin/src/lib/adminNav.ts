@@ -12,6 +12,7 @@ import {
   BuildingIcon,
   CalculatorIcon,
   FolderIcon,
+  BookOpenIcon,
   Grid2X2Icon,
   KeyRoundIcon,
   PlugZapIcon,
@@ -67,6 +68,12 @@ export const ADMIN_NAV_GROUPS = [
         label: "Steps",
         keywords: "onboarding steps setup wizard cards groups playbooks",
         icon: ListChecksIcon,
+      },
+      {
+        to: "/onboarding-playbooks",
+        label: "Use Cases & Playbooks",
+        keywords: "onboarding use cases playbooks outcomes default",
+        icon: BookOpenIcon,
       },
       {
         to: "/remote-session-issuers",
