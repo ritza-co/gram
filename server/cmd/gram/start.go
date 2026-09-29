@@ -1169,6 +1169,7 @@ func newStartCommand() *cli.Command {
 			}
 			policyBypass := risk.NewPolicyBypassEvaluator(logger, db)
 			toolDispositionCache := mcpservers.NewToolDispositionCache(logger, db, cache.NewRedisCacheAdapter(redisClient))
+			mcpFindingEvidence := risk.NewMCPFindingEvidenceStore(db, encryptionClient)
 			mcpPolicyEvaluator := mcpriskscan.NewPolicyEvaluator(
 				logger,
 				tracerProvider,
@@ -1177,6 +1178,7 @@ func newStartCommand() *cli.Command {
 				risk.NewMCPPolicyScanner(riskScanner, shadowMCPClient),
 				publishers.RiskFindings,
 				mcpriskscan.DefaultPolicyConfig,
+				mcpriskscan.WithMCPFindingEvidenceWriter(mcpFindingEvidence),
 			)
 			mcpService, err := newMCPService(c, mcpServiceDependencies{
 				CallerAssertions: callerAssertions,
@@ -1910,6 +1912,7 @@ func newStartCommand() *cli.Command {
 					}
 					return urls, nil
 				},
+				mcpFindingEvidence,
 				riskchrepo.New(chDB),
 				assetStorage,
 				metering.NewRiskRecorder(publishers.MeterReadings),

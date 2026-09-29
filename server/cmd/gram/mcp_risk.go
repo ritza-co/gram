@@ -13,6 +13,7 @@ import (
 	"github.com/speakeasy-api/gram/server/internal/background"
 	ra "github.com/speakeasy-api/gram/server/internal/background/activities/risk_analysis"
 	"github.com/speakeasy-api/gram/server/internal/cache"
+	"github.com/speakeasy-api/gram/server/internal/encryption"
 	"github.com/speakeasy-api/gram/server/internal/feature"
 	"github.com/speakeasy-api/gram/server/internal/mcpriskscan"
 	"github.com/speakeasy-api/gram/server/internal/mcpservers"
@@ -35,6 +36,7 @@ func newMCPRiskEvaluator(
 	tracerProvider trace.TracerProvider,
 	meterProvider metric.MeterProvider,
 	db *pgxpool.Pool,
+	enc *encryption.Client,
 	redisClient *redis.Client,
 	features feature.Provider,
 	completions gramopenrouter.CompletionClient,
@@ -80,6 +82,7 @@ func newMCPRiskEvaluator(
 		risk.NewMCPPolicyScanner(scanner, shadowMCPClient),
 		publishers.RiskFindings,
 		mcpriskscan.DefaultPolicyConfig,
+		mcpriskscan.WithMCPFindingEvidenceWriter(risk.NewMCPFindingEvidenceStore(db, enc)),
 	)
 	return evaluator, scanner, nil
 }
