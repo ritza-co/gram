@@ -286,9 +286,10 @@ export function ReplaceClientSecretButton({
   const [open, setOpen] = useState(false);
   const [secret, setSecret] = useState("");
   const replace = useReplaceIdentityProviderConnectionClientSecretMutation({
-    // The request variables carry the plaintext secret; drop them on settle.
+    // The request variables carry the plaintext secret; reset clears them.
     gcTime: 0,
     onSuccess: (updated) => {
+      replace.reset();
       if (updated.status === "verified") {
         toast.success("Client secret replaced");
       } else {

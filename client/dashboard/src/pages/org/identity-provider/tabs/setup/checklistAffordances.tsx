@@ -25,10 +25,14 @@ function adminConsoleLink(connection: LiveConnection): JSX.Element {
   );
 }
 
-function apiServiceIntegrationsLink(connection: LiveConnection): JSX.Element {
+function apiServiceIntegrationsLink(
+  connection: LiveConnection,
+): JSX.Element | null {
+  const href = oktaApiServiceIntegrationsUrl(connection.orgUrl);
+  if (!href) return null;
   return (
     <a
-      href={oktaApiServiceIntegrationsUrl(connection.orgUrl)}
+      href={href}
       target="_blank"
       rel="noopener noreferrer"
       className="text-sm underline underline-offset-4"

@@ -162,4 +162,13 @@ describe("oktaApiServiceIntegrationsUrl", () => {
       "https://acme-admin.okta.com/admin/apps/api-service-integrations",
     );
   });
+
+  it("returns no link for a URL that is not an Okta tenant", () => {
+    expect(
+      oktaApiServiceIntegrationsUrl("javascript:alert(1)"),
+    ).toBeUndefined();
+    expect(
+      oktaApiServiceIntegrationsUrl("https://evil.example.com"),
+    ).toBeUndefined();
+  });
 });

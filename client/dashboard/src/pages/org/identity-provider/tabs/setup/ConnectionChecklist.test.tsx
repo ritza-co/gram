@@ -132,6 +132,12 @@ describe("ConnectionChecklist", () => {
         .getAttribute("href"),
     ).toBe("https://acme-admin.okta.com/admin/apps/api-service-integrations");
     expect(screen.getByLabelText("Client secret")).toBeTruthy();
+    const scopes = screen.getByText("Step grant_scopes").closest("li")!;
+    const credentials = screen
+      .getByText("Step submit_client_id")
+      .closest("li")!;
+    expect(scopes.textContent).toContain("Not checked");
+    expect(credentials.textContent).toContain("Needs attention");
   });
 
   it("expands the agent phase once verified and ticks observed steps", () => {

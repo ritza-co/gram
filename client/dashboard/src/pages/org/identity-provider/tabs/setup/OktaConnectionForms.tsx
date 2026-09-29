@@ -188,9 +188,10 @@ export function ClientIdForm({
   const [clientSecret, setClientSecret] = useState("");
   const needsSecret = usesClientSecret(connection);
   const submit = useSubmitIdentityProviderConnectionClientIdMutation({
-    // The request variables can carry the plaintext secret; drop them on settle.
+    // The request variables can carry the plaintext secret; reset clears them.
     gcTime: 0,
     onSuccess: (updated) => {
+      submit.reset();
       if (updated.status === "verified") {
         toast.success("Connection verified");
       } else {
