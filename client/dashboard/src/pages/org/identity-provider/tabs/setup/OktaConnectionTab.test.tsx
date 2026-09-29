@@ -4,7 +4,33 @@ import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { OktaIdentityProviderConnection } from "@gram/client/models/components/oktaidentityproviderconnection.js";
 
+import { TooltipProvider } from "@/components/ui/Tooltip";
+
 import { OktaConnectionTab } from "./OktaConnectionTab";
+import { makeConnection } from "./testFixtures";
+
+vi.mock("@/hooks/useFeatureFlag", () => ({
+  useFeatureFlag: () => ({ status: "disabled" }),
+}));
+
+const idleMutation = vi.hoisted(() => () => ({
+  mutate: vi.fn(),
+  reset: vi.fn(),
+  isPending: false,
+  error: null,
+}));
+vi.mock("@gram/client/react-query/verifyIdentityProviderConnection.js", () => ({
+  useVerifyIdentityProviderConnectionMutation: idleMutation,
+}));
+vi.mock("@gram/client/react-query/revokeIdentityProviderConnection.js", () => ({
+  useRevokeIdentityProviderConnectionMutation: idleMutation,
+}));
+vi.mock(
+  "@gram/client/react-query/replaceIdentityProviderConnectionClientSecret.js",
+  () => ({
+    useReplaceIdentityProviderConnectionClientSecretMutation: idleMutation,
+  }),
+);
 
 vi.mock("@gram/client/react-query/createIdentityProviderConnection.js", () => ({
   useCreateIdentityProviderConnectionMutation: () => ({
@@ -40,4 +66,34 @@ describe("OktaConnectionTab", () => {
       expect(screen.queryByRole("navigation")).toBeNull();
     },
   );
+
+  function renderTab(connection: OktaIdentityProviderConnection) {
+    render(
+      <MemoryRouter>
+        <QueryClientProvider client={new QueryClient()}>
+          <TooltipProvider>
+            <OktaConnectionTab connection={connection} />
+          </TooltipProvider>
+        </QueryClientProvider>
+      </MemoryRouter>,
+    );
+  }
+
+  it("offers to replace the secret on secret-based OIN connections", () => {
+    renderTab(makeConnection({ listingMode: "oin", jwksUrl: undefined }));
+    expect(
+      screen.getByRole("button", { name: "Replace client secret" }),
+    ).toBeTruthy();
+  });
+
+  it.each([
+    ["legacy OIN with a key set", makeConnection({ listingMode: "oin" })],
+    ["custom app", makeConnection()],
+  ])("has no secret to replace on a %s connection", (_, connection) => {
+    renderTab(connection);
+    expect(
+      screen.queryByRole("button", { name: "Replace client secret" }),
+    ).toBeNull();
+    expect(screen.getByText(/public key URL \(JWKS\)/)).toBeTruthy();
+  });
 });

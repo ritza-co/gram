@@ -1,17 +1,29 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
+import { ApiErrorAlert } from "@/components/api-error-alert";
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { CopyButton } from "@/components/ui/CopyButton";
+import { Dialog } from "@/components/ui/Dialog";
 import { Text } from "@/components/ui/Text";
 import { HumanizeDateTime } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import type { OktaIdentityProviderConnection } from "@gram/client/models/components/oktaidentityproviderconnection.js";
+import { useReplaceIdentityProviderConnectionClientSecretMutation } from "@gram/client/react-query/replaceIdentityProviderConnectionClientSecret.js";
 
 import {
   dpopObservation,
   isConnectionChecked,
   LISTING_MODE_LABELS,
 } from "../../connectionView";
+import {
+  inlineError,
+  invalidateIdentityProviderQueries,
+  SESSION_SECURITY,
+} from "../../identityProviderQueries";
+import { ClientSecretField } from "./OktaConnectionForms";
 
 function FactList({
   children,
@@ -261,5 +273,103 @@ export function ConnectionScopes({
         unknown={unknown}
       />
     </div>
+  );
+}
+
+/** OIN connections authenticate with a client secret; rotating it re-verifies and keeps the old one on rejection. */
+export function ReplaceClientSecretButton({
+  connection,
+}: {
+  connection: OktaIdentityProviderConnection;
+}): JSX.Element {
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [secret, setSecret] = useState("");
+  const replace = useReplaceIdentityProviderConnectionClientSecretMutation({
+    // The request variables carry the plaintext secret; drop them on settle.
+    gcTime: 0,
+    onSuccess: (updated) => {
+      if (updated.status === "verified") {
+        toast.success("Client secret replaced");
+      } else {
+        toast.warning(
+          "Client secret replaced. Review the verification results.",
+        );
+      }
+      setOpen(false);
+      setSecret("");
+      void invalidateIdentityProviderQueries(queryClient);
+    },
+    onError: inlineError,
+  });
+  const trimmed = secret.trim();
+  const close = () => {
+    if (replace.isPending) return;
+    setOpen(false);
+    setSecret("");
+    replace.reset();
+  };
+  const submit = () => {
+    if (trimmed === "" || replace.isPending) return;
+    replace.mutate({
+      security: SESSION_SECURITY,
+      request: {
+        replaceIdentityProviderConnectionClientSecretRequestBody: {
+          id: connection.id,
+          clientSecret: trimmed,
+        },
+      },
+    });
+  };
+
+  return (
+    <>
+      <Button variant="secondary" onClick={() => setOpen(true)}>
+        Replace client secret
+      </Button>
+      <Dialog
+        open={open}
+        onOpenChange={(next) => {
+          if (next) setOpen(true);
+          else close();
+        }}
+      >
+        <Dialog.Content>
+          <Dialog.Header>
+            <Dialog.Title>Replace the client secret</Dialog.Title>
+            <Dialog.Description>
+              Generate a new client secret for the Speakeasy app in Okta and
+              paste it here. Speakeasy checks it with Okta before saving. If
+              Okta rejects it, the current secret stays in use.
+            </Dialog.Description>
+          </Dialog.Header>
+          <div className="space-y-3 py-2">
+            <ClientSecretField
+              id="okta-replace-client-secret"
+              value={secret}
+              onChange={setSecret}
+              onEnter={submit}
+              disabled={replace.isPending}
+            />
+            <ApiErrorAlert error={replace.error} />
+          </div>
+          <Dialog.Footer>
+            <Button
+              variant="secondary"
+              onClick={close}
+              disabled={replace.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={trimmed === "" || replace.isPending}
+              onClick={submit}
+            >
+              {replace.isPending ? "Verifying..." : "Replace and verify"}
+            </Button>
+          </Dialog.Footer>
+        </Dialog.Content>
+      </Dialog>
+    </>
   );
 }

@@ -15,7 +15,11 @@ import { useVerifyIdentityProviderConnectionMutation } from "@gram/client/react-
 import { STEP_AFFORDANCES } from "./checklistAffordances";
 import { ConnectionChecklist } from "./ConnectionChecklist";
 import { ConnectionSetupProgress } from "./ConnectionSetupProgress";
-import { ConnectionFacts, ConnectionScopes } from "./OktaConnectionDetails";
+import {
+  ConnectionFacts,
+  ConnectionScopes,
+  ReplaceClientSecretButton,
+} from "./OktaConnectionDetails";
 import { CreateConnectionForm } from "./OktaConnectionForms";
 import { RevokeConnectionButton } from "./RevokeConnectionButton";
 import {
@@ -24,6 +28,7 @@ import {
   isConnected,
   LAST_ERROR_LABELS,
   VERIFICATION_REASON_LABELS,
+  usesClientSecret,
   type ConnectionStep,
   type LiveConnection,
 } from "../../connectionView";
@@ -84,9 +89,14 @@ function VerificationOutcome({
 const FOOTER_HINTS: Record<ConnectionStep, string> = {
   connected: "Re-verify after changing the app’s permissions in Okta.",
   repair: "Re-verify after changing the app’s permissions in Okta.",
-  verify: "Verify once the app is set up to use the public key URL (JWKS).",
+  verify: "Verify once the app is set up in Okta.",
   submit_client_id: "Verification runs after the client ID is submitted.",
 };
+
+const KEY_DESCRIPTION =
+  "Speakeasy uses this API Services app to connect to Okta. Okta reads public keys from the public key URL (JWKS) below to check that requests come from Speakeasy. Private keys stay with Speakeasy.";
+const SECRET_DESCRIPTION =
+  "Speakeasy uses the app installed from the Okta Integration Network to connect to Okta. It signs in with the client ID and client secret you submitted. Speakeasy stores the secret encrypted and never displays it.";
 
 const SECTION_LINK = "text-sm underline underline-offset-4";
 
@@ -122,6 +132,7 @@ function ConnectionCard({
   const queryClient = useQueryClient();
   const step = connectionStep(connection);
   const status = CONNECTION_STATUS[connection.status];
+  const secretAuth = usesClientSecret(connection);
   const verify = useVerifyIdentityProviderConnectionMutation({
     onSuccess: (updated) => {
       if (updated.status === "verified") {
@@ -160,9 +171,7 @@ function ConnectionCard({
           </Badge>
         </div>
         <SettingsSection.Description>
-          Speakeasy uses this API Services app to connect to Okta. Okta reads
-          public keys from the public key URL (JWKS) below to check that
-          requests come from Speakeasy. Private keys stay with Speakeasy.
+          {secretAuth ? SECRET_DESCRIPTION : KEY_DESCRIPTION}
         </SettingsSection.Description>
       </SettingsSection.Header>
       <SettingsSection.Panel>
@@ -184,7 +193,7 @@ function ConnectionCard({
                   ? "Next: fix the connection issues"
                   : "Next: verify your connection"
               }
-              body={`Check the app's permissions (scopes), admin role, and public key settings in Okta, then verify access.${
+              body={`Check the app's permissions (scopes), admin role, and sign-in settings in Okta, then verify access.${
                 step === "repair"
                   ? " Application sync is paused until verification passes."
                   : ""
@@ -211,6 +220,9 @@ function ConnectionCard({
           </SettingsSection.FooterHint>
           <SettingsSection.FooterActions>
             <RevokeConnectionButton connection={connection} />
+            {secretAuth && connection.clientIdSubmitted && (
+              <ReplaceClientSecretButton connection={connection} />
+            )}
             {step === "connected" && (
               <Button
                 variant="secondary"

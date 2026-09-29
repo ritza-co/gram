@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   normalizeOktaOrgUrl,
   oktaAdminConsoleUrl,
+  oktaApiServiceIntegrationsUrl,
   oktaApplicationsUrl,
   oktaConnectionsUrl,
   oktaConsoleUrl,
@@ -151,6 +152,14 @@ describe("normalizeOktaOrgUrl", () => {
     );
     expect(normalizeOktaOrgUrl("https://a.b.okta.mil/")).toBe(
       "https://a.b.okta.mil",
+    );
+  });
+});
+
+describe("oktaApiServiceIntegrationsUrl", () => {
+  it("opens the admin console's API Service Integrations page", () => {
+    expect(oktaApiServiceIntegrationsUrl("https://acme.okta.com/")).toBe(
+      "https://acme-admin.okta.com/admin/apps/api-service-integrations",
     );
   });
 });

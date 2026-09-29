@@ -1,9 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/Tooltip";
 import type { OktaIdentityProviderConnection } from "@gram/client/models/components/oktaidentityproviderconnection.js";
 
-import { ConnectionFacts } from "./OktaConnectionDetails";
+import {
+  ConnectionFacts,
+  ReplaceClientSecretButton,
+} from "./OktaConnectionDetails";
 import { makeChecklistItem, makeConnection } from "./testFixtures";
 
 vi.mock("@/lib/dates", () => ({
@@ -12,7 +16,24 @@ vi.mock("@/lib/dates", () => ({
   ),
 }));
 
-afterEach(cleanup);
+const replaceMutation = vi.hoisted(() => ({
+  mutate: vi.fn(),
+  reset: vi.fn(),
+  isPending: false,
+  error: undefined,
+}));
+vi.mock(
+  "@gram/client/react-query/replaceIdentityProviderConnectionClientSecret.js",
+  () => ({
+    useReplaceIdentityProviderConnectionClientSecretMutation: () =>
+      replaceMutation,
+  }),
+);
+
+afterEach(() => {
+  cleanup();
+  replaceMutation.mutate.mockClear();
+});
 
 const connection = makeConnection({ status: "degraded" });
 
@@ -106,5 +127,42 @@ describe("ConnectionFacts key material", () => {
     render(facts({ ...connection, listingMode: "oin", jwksUrl: undefined }));
     expect(screen.queryByText("Public key URL (JWKS)")).toBeNull();
     expect(screen.queryByText("Active signing key ID")).toBeNull();
+  });
+});
+
+describe("ConnectionFacts for OIN connections", () => {
+  it("hides the JWKS row and labels the listing", () => {
+    render(facts({ ...connection, listingMode: "oin", jwksUrl: undefined }));
+    expect(screen.queryByText("Public key URL (JWKS)")).toBeNull();
+    expect(screen.getByText("Okta catalog (OIN)")).toBeTruthy();
+  });
+});
+
+describe("ReplaceClientSecretButton", () => {
+  it("submits the new secret from the dialog", () => {
+    const oin = makeConnection({ listingMode: "oin", jwksUrl: undefined });
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ReplaceClientSecretButton connection={oin} />
+      </QueryClientProvider>,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Replace client secret" }),
+    );
+    const confirm = screen.getByRole("button", { name: "Replace and verify" });
+    expect(confirm.hasAttribute("disabled")).toBe(true);
+    fireEvent.change(screen.getByLabelText("Client secret"), {
+      target: { value: " new-secret " },
+    });
+    fireEvent.click(confirm);
+    expect(replaceMutation.mutate).toHaveBeenCalledExactlyOnceWith({
+      security: expect.anything(),
+      request: {
+        replaceIdentityProviderConnectionClientSecretRequestBody: {
+          id: oin.id,
+          clientSecret: "new-secret",
+        },
+      },
+    });
   });
 });
