@@ -8,8 +8,6 @@ import { Field, FieldDescription, FieldLabel } from "@/components/ui/Field";
 import { Input } from "@/components/ui/Input";
 import { RadioCard, RadioCardGroup } from "@/components/ui/RadioCard";
 import { SettingsSection } from "@/components/page-templates";
-import { useFeatureFlag } from "@/hooks/useFeatureFlag";
-import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import type {
   OktaIdentityProviderConnection,
   OktaIdentityProviderConnectionListingMode,
@@ -75,12 +73,8 @@ function ListingModeChoice({
 export function CreateConnectionForm(): JSX.Element {
   const queryClient = useQueryClient();
   const [orgUrl, setOrgUrl] = useState("");
-  // The OIN listing is unpublished until this flag rolls out; custom_app only until then.
-  const oinListed =
-    useFeatureFlag(FEATURE_FLAGS.oktaOinListing).status === "enabled";
-  const [chosenListingMode, setListingMode] =
+  const [listingMode, setListingMode] =
     useState<OktaIdentityProviderConnectionListingMode>("oin");
-  const listingMode = oinListed ? chosenListingMode : "custom_app";
   const create = useCreateIdentityProviderConnectionMutation({
     onSuccess: () => {
       toast.success("Okta connection created");
@@ -111,22 +105,18 @@ export function CreateConnectionForm(): JSX.Element {
           Connect your Okta organization
         </SettingsSection.Title>
         <SettingsSection.Description>
-          {oinListed
-            ? "Choose how to add Speakeasy to Okta and enter your Okta organization URL."
-            : "Enter your Okta organization URL to get started."}{" "}
-          We’ll guide you through setting up the Okta app next. This does not
-          change anything in Okta.
+          Choose how to add Speakeasy to Okta and enter your Okta organization
+          URL. We’ll guide you through setting up the Okta app next. This does
+          not change anything in Okta.
         </SettingsSection.Description>
       </SettingsSection.Header>
       <SettingsSection.Panel>
         <SettingsSection.Body>
-          {oinListed && (
-            <ListingModeChoice
-              value={listingMode}
-              onChange={setListingMode}
-              disabled={create.isPending}
-            />
-          )}
+          <ListingModeChoice
+            value={listingMode}
+            onChange={setListingMode}
+            disabled={create.isPending}
+          />
           <Field className="max-w-xl">
             <FieldLabel htmlFor="okta-org-url">
               Okta organization URL

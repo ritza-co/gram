@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/Tooltip";
-import type { FeatureFlagResult } from "@/hooks/useFeatureFlag";
 import { ClientIdForm, CreateConnectionForm } from "./OktaConnectionForms";
 import { makeConnection } from "./testFixtures";
 
@@ -10,12 +9,6 @@ const mutation = vi.hoisted(() => ({
   mutate: vi.fn(),
   isPending: false,
   error: undefined,
-}));
-const flag = vi.hoisted(() => ({
-  result: { status: "enabled" } as FeatureFlagResult,
-}));
-vi.mock("@/hooks/useFeatureFlag", () => ({
-  useFeatureFlag: () => flag.result,
 }));
 vi.mock("@gram/client/react-query/createIdentityProviderConnection.js", () => ({
   useCreateIdentityProviderConnectionMutation: () => mutation,
@@ -30,7 +23,6 @@ afterEach(cleanup);
 beforeEach(() => {
   mutation.mutate.mockClear();
   mutation.isPending = false;
-  flag.result = { status: "enabled" };
 });
 
 function Wrapper({ children }: { children: React.ReactNode }) {
@@ -124,31 +116,6 @@ describe("CreateConnectionForm", () => {
       },
     });
   });
-
-  it.each(["disabled", "loading", "missing", "error"] as const)(
-    "offers only the custom app when the OIN flag is %s",
-    (status) => {
-      flag.result = { status };
-      render(<CreateConnectionForm />, { wrapper: Wrapper });
-      expect(screen.queryByRole("radio")).toBeNull();
-      expect(screen.queryByText(/Okta Integration Network/)).toBeNull();
-      fireEvent.change(screen.getByLabelText("Okta organization URL"), {
-        target: { value: "https://example.okta.com/" },
-      });
-      fireEvent.click(
-        screen.getByRole("button", { name: "Create connection" }),
-      );
-      expect(mutation.mutate).toHaveBeenCalledExactlyOnceWith({
-        security: expect.anything(),
-        request: {
-          createIdentityProviderConnectionRequestBody: {
-            orgUrl: "https://example.okta.com",
-            listingMode: "custom_app",
-          },
-        },
-      });
-    },
-  );
 
   it("disables the button for a non-Okta URL and while pending", () => {
     const { rerender } = render(<CreateConnectionForm />, {

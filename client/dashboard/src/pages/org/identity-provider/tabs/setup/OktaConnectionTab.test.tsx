@@ -9,10 +9,6 @@ import { TooltipProvider } from "@/components/ui/Tooltip";
 import { OktaConnectionTab } from "./OktaConnectionTab";
 import { makeConnection } from "./testFixtures";
 
-vi.mock("@/hooks/useFeatureFlag", () => ({
-  useFeatureFlag: () => ({ status: "disabled" }),
-}));
-
 const idleMutation = vi.hoisted(() => () => ({
   mutate: vi.fn(),
   reset: vi.fn(),

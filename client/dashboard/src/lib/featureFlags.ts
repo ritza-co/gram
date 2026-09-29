@@ -19,7 +19,6 @@ export const FEATURE_FLAGS = {
   newCostsPage: "gram-new-costs-page",
   oktaConnections: "okta-connections",
   // Offers the Okta Integration Network install path; off until the listing is published.
-  oktaOinListing: "okta-oin-listing",
   paygSelfServeBilling: "gram-payg-self-serve-billing",
   promptPolicies: "gram-prompt-policies",
   rbac: "gram-rbac",
