@@ -129,6 +129,7 @@ import {
   allCategories,
   categoriesToPayload,
   categoryLevelDetectors,
+  mcpCompatibleAction,
   normalizeCategoriesForMode,
   parseApprovedEmailDomains,
   persistedCategories,
@@ -1978,6 +1979,7 @@ function ActionStep({
   score,
   setScore,
   flagOnlySelected = false,
+  mcpScoped = false,
   shadowMCPAllowedServers,
 }: {
   action: PolicyAction;
@@ -1993,6 +1995,7 @@ function ActionStep({
   score: number;
   setScore: React.Dispatch<React.SetStateAction<number>>;
   flagOnlySelected?: boolean;
+  mcpScoped?: boolean;
   shadowMCPAllowedServers?: ReactNode;
 }): JSX.Element {
   return (
@@ -2007,6 +2010,7 @@ function ActionStep({
             formAction={action}
             setFormAction={setAction}
             flagOnlySelected={flagOnlySelected}
+            mcpScoped={mcpScoped}
           />
           {shadowMCPAllowedServers}
           <PolicyAudiencePicker
@@ -3582,8 +3586,11 @@ export function StandardPolicyEditor({
   const [selectedCustomRuleIds, setSelectedCustomRuleIds] = useState<
     Set<string>
   >(() => new Set(policy?.customRuleIds ?? []));
+  const initialAction = (policy?.action as PolicyAction) ?? "flag";
   const [action, setAction] = useState<PolicyAction>(
-    (policy?.action as PolicyAction) ?? "flag",
+    mcpScope.mode === "mcp"
+      ? mcpCompatibleAction(initialAction)
+      : initialAction,
   );
   // Under block_all the URL set holds allowed servers; under allow_all it
   // holds blocked servers. The disposition is immutable after create, so the
@@ -3782,6 +3789,12 @@ export function StandardPolicyEditor({
     },
   });
   const saving = updateMutation.isPending || createMutation.isPending;
+  const updateMCPScope = (next: PolicyMCPScopeValue) => {
+    setMcpScope(next);
+    if (next.mode === "mcp") {
+      setAction((current) => mcpCompatibleAction(current));
+    }
+  };
 
   // Toggle a whole built-in detector category (clears its per-rule disables).
   // Flag-only categories force the policy action to flag.
@@ -4087,7 +4100,7 @@ export function StandardPolicyEditor({
             scopeOverrides={scopeOverrides}
             setScopeOverrides={setScopeOverrides}
             mcpScope={mcpScope}
-            setMcpScope={setMcpScope}
+            setMcpScope={updateMCPScope}
             action={action}
             hasStoredMcpScope={!!policy?.mcpScope}
           />
@@ -4106,6 +4119,7 @@ export function StandardPolicyEditor({
             score={score}
             setScore={setScore}
             flagOnlySelected={flagOnlySelected}
+            mcpScoped={mcpScope.mode === "mcp"}
             shadowMCPAllowedServers={
               targetIsShadowMCPBlock ? (
                 <div className="grid gap-5 lg:grid-cols-3 lg:items-start">
