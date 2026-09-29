@@ -192,6 +192,7 @@ export function ClientIdForm({
     gcTime: 0,
     onSuccess: (updated) => {
       submit.reset();
+      setClientSecret("");
       if (updated.status === "verified") {
         toast.success("Connection verified");
       } else {
