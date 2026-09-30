@@ -16,7 +16,7 @@ type AdminContext struct {
 	Workflows []string `json:"available_workflows"`
 }
 
-func registerContextTool(server *mcp.Server, organizationReadsAvailable, projectReadsAvailable, configurationReadsAvailable, activityReadsAvailable, usageReadsAvailable, coverageReadsAvailable, issuerReadsAvailable, matrixReadsAvailable, onboardingReadsAvailable, projectMCPReadsAvailable, billingDiagnosticsAvailable bool) {
+func registerContextTool(server *mcp.Server, organizationReadsAvailable, projectReadsAvailable, configurationReadsAvailable, activityReadsAvailable, usageReadsAvailable, coverageReadsAvailable, issuerReadsAvailable, matrixReadsAvailable, onboardingReadsAvailable, projectMCPReadsAvailable, billingDiagnosticsAvailable, serverHealthAvailable bool) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "get_admin_context",
 		Title:       "Get Staff Admin Context",
@@ -60,6 +60,9 @@ func registerContextTool(server *mcp.Server, organizationReadsAvailable, project
 		}
 		if billingDiagnosticsAvailable {
 			workflows = append(workflows, "inspect bounded organization inference key state, spend history and metered usage totals")
+		}
+		if serverHealthAvailable {
+			workflows = append(workflows, "inspect one MCP server's authentication configuration, session counts and tool call outcomes")
 		}
 		return nil, AdminContext{
 			Email:     principal.Email,
