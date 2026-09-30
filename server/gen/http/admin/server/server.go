@@ -78,6 +78,7 @@ type Server struct {
 	GetSupportMatrix                      http.Handler
 	UpdateSupportMatrix                   http.Handler
 	GetSupportCoverage                    http.Handler
+	DescribeMcpServerHealth               http.Handler
 	ListRegistryEntries                   http.Handler
 	GetRegistryEntry                      http.Handler
 	CreateRegistryEntry                   http.Handler
@@ -169,6 +170,7 @@ func New(
 			{"GetSupportMatrix", "GET", "/admin/supportMatrix.get"},
 			{"UpdateSupportMatrix", "POST", "/admin/supportMatrix.update"},
 			{"GetSupportCoverage", "GET", "/admin/supportCoverage.get"},
+			{"DescribeMcpServerHealth", "GET", "/admin/project.mcpServerHealth"},
 			{"ListRegistryEntries", "GET", "/admin/registry.list"},
 			{"GetRegistryEntry", "GET", "/admin/registry.get"},
 			{"CreateRegistryEntry", "POST", "/admin/registry.create"},
@@ -232,6 +234,7 @@ func New(
 		GetSupportMatrix:                      NewGetSupportMatrixHandler(e.GetSupportMatrix, mux, decoder, encoder, errhandler, formatter),
 		UpdateSupportMatrix:                   NewUpdateSupportMatrixHandler(e.UpdateSupportMatrix, mux, decoder, encoder, errhandler, formatter),
 		GetSupportCoverage:                    NewGetSupportCoverageHandler(e.GetSupportCoverage, mux, decoder, encoder, errhandler, formatter),
+		DescribeMcpServerHealth:               NewDescribeMcpServerHealthHandler(e.DescribeMcpServerHealth, mux, decoder, encoder, errhandler, formatter),
 		ListRegistryEntries:                   NewListRegistryEntriesHandler(e.ListRegistryEntries, mux, decoder, encoder, errhandler, formatter),
 		GetRegistryEntry:                      NewGetRegistryEntryHandler(e.GetRegistryEntry, mux, decoder, encoder, errhandler, formatter),
 		CreateRegistryEntry:                   NewCreateRegistryEntryHandler(e.CreateRegistryEntry, mux, decoder, encoder, errhandler, formatter),
@@ -302,6 +305,7 @@ func (s *Server) Use(m func(http.Handler) http.Handler) {
 	s.GetSupportMatrix = m(s.GetSupportMatrix)
 	s.UpdateSupportMatrix = m(s.UpdateSupportMatrix)
 	s.GetSupportCoverage = m(s.GetSupportCoverage)
+	s.DescribeMcpServerHealth = m(s.DescribeMcpServerHealth)
 	s.ListRegistryEntries = m(s.ListRegistryEntries)
 	s.GetRegistryEntry = m(s.GetRegistryEntry)
 	s.CreateRegistryEntry = m(s.CreateRegistryEntry)
@@ -371,6 +375,7 @@ func Mount(mux goahttp.Muxer, h *Server) {
 	MountGetSupportMatrixHandler(mux, h.GetSupportMatrix)
 	MountUpdateSupportMatrixHandler(mux, h.UpdateSupportMatrix)
 	MountGetSupportCoverageHandler(mux, h.GetSupportCoverage)
+	MountDescribeMcpServerHealthHandler(mux, h.DescribeMcpServerHealth)
 	MountListRegistryEntriesHandler(mux, h.ListRegistryEntries)
 	MountGetRegistryEntryHandler(mux, h.GetRegistryEntry)
 	MountCreateRegistryEntryHandler(mux, h.CreateRegistryEntry)
@@ -3437,6 +3442,60 @@ func NewGetSupportCoverageHandler(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "getSupportCoverage")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "admin")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		res, err := endpoint(ctx, payload)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+		}
+	})
+}
+
+// MountDescribeMcpServerHealthHandler configures the mux to serve the "admin"
+// service "describeMcpServerHealth" endpoint.
+func MountDescribeMcpServerHealthHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("GET", "/admin/project.mcpServerHealth", f)
+}
+
+// NewDescribeMcpServerHealthHandler creates a HTTP handler which loads the
+// HTTP request and calls the "admin" service "describeMcpServerHealth"
+// endpoint.
+func NewDescribeMcpServerHealthHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeDescribeMcpServerHealthRequest(mux, decoder)
+		encodeResponse = EncodeDescribeMcpServerHealthResponse(encoder)
+		encodeError    = EncodeDescribeMcpServerHealthError(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "describeMcpServerHealth")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "admin")
 		payload, err := decodeRequest(r)
 		if err != nil {

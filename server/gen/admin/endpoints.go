@@ -74,6 +74,7 @@ type Endpoints struct {
 	GetSupportMatrix                      goa.Endpoint
 	UpdateSupportMatrix                   goa.Endpoint
 	GetSupportCoverage                    goa.Endpoint
+	DescribeMcpServerHealth               goa.Endpoint
 	ListRegistryEntries                   goa.Endpoint
 	GetRegistryEntry                      goa.Endpoint
 	CreateRegistryEntry                   goa.Endpoint
@@ -161,6 +162,7 @@ func NewEndpoints(s Service) *Endpoints {
 		GetSupportMatrix:                      NewGetSupportMatrixEndpoint(s, a.APIKeyAuth),
 		UpdateSupportMatrix:                   NewUpdateSupportMatrixEndpoint(s, a.APIKeyAuth),
 		GetSupportCoverage:                    NewGetSupportCoverageEndpoint(s, a.APIKeyAuth),
+		DescribeMcpServerHealth:               NewDescribeMcpServerHealthEndpoint(s, a.APIKeyAuth),
 		ListRegistryEntries:                   NewListRegistryEntriesEndpoint(s, a.APIKeyAuth),
 		GetRegistryEntry:                      NewGetRegistryEntryEndpoint(s, a.APIKeyAuth),
 		CreateRegistryEntry:                   NewCreateRegistryEntryEndpoint(s, a.APIKeyAuth),
@@ -228,6 +230,7 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 	e.GetSupportMatrix = m(e.GetSupportMatrix)
 	e.UpdateSupportMatrix = m(e.UpdateSupportMatrix)
 	e.GetSupportCoverage = m(e.GetSupportCoverage)
+	e.DescribeMcpServerHealth = m(e.DescribeMcpServerHealth)
 	e.ListRegistryEntries = m(e.ListRegistryEntries)
 	e.GetRegistryEntry = m(e.GetRegistryEntry)
 	e.CreateRegistryEntry = m(e.CreateRegistryEntry)
@@ -1504,6 +1507,29 @@ func NewGetSupportCoverageEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFu
 			return nil, err
 		}
 		return s.GetSupportCoverage(ctx, p)
+	}
+}
+
+// NewDescribeMcpServerHealthEndpoint returns an endpoint function that calls
+// the method "describeMcpServerHealth" of service "admin".
+func NewDescribeMcpServerHealthEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*DescribeMcpServerHealthPayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "admin_auth",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.AdminSessionToken != nil {
+			key = *p.AdminSessionToken
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
+		return s.DescribeMcpServerHealth(ctx, p)
 	}
 }
 

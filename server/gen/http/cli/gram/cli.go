@@ -195,7 +195,7 @@ func UsageCommands() []string {
 		"tunneled-mcp (create-server|list-servers|get-server|list-server-connections|update-server|rotate-server-key|delete-server)",
 		"unproxied-mcp (create-server|list-servers|get-server|list-tools|delete-server)",
 		"usage (get-period-usage|get-meter-usage|get-spend-breakdown|get-tokens-under-management|set-billing-metadata|get-billing-email|set-billing-email|set-spend-cap|get-inference-spend-caps|get-usage-tiers|create-customer-session|create-checkout|create-stripe-checkout|get-stripe-subscription|get-payg-billing-summary|create-stripe-portal-session|cancel-stripe-subscription|resume-stripe-subscription|create-top-up-checkout)",
-		"admin (login|callback|logout|get-session|get-organization-features|set-organization-feature|get-organization-chat-analysis-settings|set-organization-chat-analysis-settings|trigger-organization-chat-analysis|open-organization-in-dashboard|get-project|update-organization|bulk-update-account-type|disable-organization|enable-organization|get-organization|list-organization-members|list-organization-projects|list-project-mcp-servers|list-organization-activity|list-organizations|extend-trial|create-organization|rearm-trial|get-organization-stats|get-inference-keys|set-inference-key-monthly-limit|get-inference-spend-history|get-payg-billing-summary|get-stripe-customer|set-stripe-customer|get-stripe-subscription|cancel-stripe-subscription|resume-stripe-subscription|mark-enterprise-trial-converted|get-organization-onboarding|set-organization-onboarding|create-global-issuer|get-global-issuer-duplicate-preflight|list-global-issuers|get-global-issuer|update-global-issuer|delete-global-issuer|fetch-global-issuer-metadata|refresh-global-issuer-metadata|list-global-issuer-convergence-candidates|get-global-issuer-migrate-preflight|migrate-to-global-issuer|upload-platform-image|serve-image|start-trial|change-trial-end-date|get-meter-usage|get-spend-breakdown|get-support-matrix|update-support-matrix|get-support-coverage|list-registry-entries|get-registry-entry|create-registry-entry|save-registry-entry|set-registry-entry-published)",
+		"admin (login|callback|logout|get-session|get-organization-features|set-organization-feature|get-organization-chat-analysis-settings|set-organization-chat-analysis-settings|trigger-organization-chat-analysis|open-organization-in-dashboard|get-project|update-organization|bulk-update-account-type|disable-organization|enable-organization|get-organization|list-organization-members|list-organization-projects|list-project-mcp-servers|list-organization-activity|list-organizations|extend-trial|create-organization|rearm-trial|get-organization-stats|get-inference-keys|set-inference-key-monthly-limit|get-inference-spend-history|get-payg-billing-summary|get-stripe-customer|set-stripe-customer|get-stripe-subscription|cancel-stripe-subscription|resume-stripe-subscription|mark-enterprise-trial-converted|get-organization-onboarding|set-organization-onboarding|create-global-issuer|get-global-issuer-duplicate-preflight|list-global-issuers|get-global-issuer|update-global-issuer|delete-global-issuer|fetch-global-issuer-metadata|refresh-global-issuer-metadata|list-global-issuer-convergence-candidates|get-global-issuer-migrate-preflight|migrate-to-global-issuer|upload-platform-image|serve-image|start-trial|change-trial-end-date|get-meter-usage|get-spend-breakdown|get-support-matrix|update-support-matrix|get-support-coverage|describe-mcp-server-health|list-registry-entries|get-registry-entry|create-registry-entry|save-registry-entry|set-registry-entry-published)",
 		"user-session-clients (list-user-session-clients|get-user-session-client|refresh-user-session-client-cimd|revoke-user-session-client)",
 		"user-session-consents (list-user-session-consents|revoke-user-session-consent)",
 		"user-session-issuers-cimd-clients (list-presets|create-user-session-issuer-cimd-client|verify-url|list-user-session-issuer-cimd-clients|get-user-session-issuer-cimd-client|delete-user-session-issuer-cimd-client)",
@@ -4331,6 +4331,13 @@ func ParseEndpoint(
 		adminGetSupportCoverageWindowDaysFlag        = adminGetSupportCoverageFlags.String("window-days", "30", "")
 		adminGetSupportCoverageAdminSessionTokenFlag = adminGetSupportCoverageFlags.String("admin-session-token", "", "")
 
+		adminDescribeMcpServerHealthFlags                 = flag.NewFlagSet("describe-mcp-server-health", flag.ExitOnError)
+		adminDescribeMcpServerHealthOrganizationIDFlag    = adminDescribeMcpServerHealthFlags.String("organization-id", "REQUIRED", "")
+		adminDescribeMcpServerHealthProjectIDFlag         = adminDescribeMcpServerHealthFlags.String("project-id", "REQUIRED", "")
+		adminDescribeMcpServerHealthMcpServerIDFlag       = adminDescribeMcpServerHealthFlags.String("mcp-server-id", "REQUIRED", "")
+		adminDescribeMcpServerHealthWindowDaysFlag        = adminDescribeMcpServerHealthFlags.String("window-days", "14", "")
+		adminDescribeMcpServerHealthAdminSessionTokenFlag = adminDescribeMcpServerHealthFlags.String("admin-session-token", "", "")
+
 		adminListRegistryEntriesFlags                 = flag.NewFlagSet("list-registry-entries", flag.ExitOnError)
 		adminListRegistryEntriesQueryFlag             = adminListRegistryEntriesFlags.String("query", "", "")
 		adminListRegistryEntriesPublishedFlag         = adminListRegistryEntriesFlags.String("published", "", "")
@@ -5538,6 +5545,7 @@ func ParseEndpoint(
 	adminGetSupportMatrixFlags.Usage = adminGetSupportMatrixUsage
 	adminUpdateSupportMatrixFlags.Usage = adminUpdateSupportMatrixUsage
 	adminGetSupportCoverageFlags.Usage = adminGetSupportCoverageUsage
+	adminDescribeMcpServerHealthFlags.Usage = adminDescribeMcpServerHealthUsage
 	adminListRegistryEntriesFlags.Usage = adminListRegistryEntriesUsage
 	adminGetRegistryEntryFlags.Usage = adminGetRegistryEntryUsage
 	adminCreateRegistryEntryFlags.Usage = adminCreateRegistryEntryUsage
@@ -8402,6 +8410,9 @@ func ParseEndpoint(
 			case "get-support-coverage":
 				epf = adminGetSupportCoverageFlags
 
+			case "describe-mcp-server-health":
+				epf = adminDescribeMcpServerHealthFlags
+
 			case "list-registry-entries":
 				epf = adminListRegistryEntriesFlags
 
@@ -11221,6 +11232,9 @@ func ParseEndpoint(
 			case "get-support-coverage":
 				endpoint = c.GetSupportCoverage()
 				data, err = adminc.BuildGetSupportCoveragePayload(*adminGetSupportCoverageOrganizationIDFlag, *adminGetSupportCoverageWindowDaysFlag, *adminGetSupportCoverageAdminSessionTokenFlag)
+			case "describe-mcp-server-health":
+				endpoint = c.DescribeMcpServerHealth()
+				data, err = adminc.BuildDescribeMcpServerHealthPayload(*adminDescribeMcpServerHealthOrganizationIDFlag, *adminDescribeMcpServerHealthProjectIDFlag, *adminDescribeMcpServerHealthMcpServerIDFlag, *adminDescribeMcpServerHealthWindowDaysFlag, *adminDescribeMcpServerHealthAdminSessionTokenFlag)
 			case "list-registry-entries":
 				endpoint = c.ListRegistryEntries()
 				data, err = adminc.BuildListRegistryEntriesPayload(*adminListRegistryEntriesQueryFlag, *adminListRegistryEntriesPublishedFlag, *adminListRegistryEntriesCursorFlag, *adminListRegistryEntriesLimitFlag, *adminListRegistryEntriesAdminSessionTokenFlag)
@@ -28707,6 +28721,7 @@ func adminUsage() {
 	fmt.Fprintln(os.Stderr, `    get-support-matrix: Read the shared support catalog and product coverage.`)
 	fmt.Fprintln(os.Stderr, `    update-support-matrix: Save coverage against the last read revision; rejects concurrent changes.`)
 	fmt.Fprintln(os.Stderr, `    get-support-coverage: Observed support coverage for one organization: per-surface evidence for session activity, policy enforcement, identity attribution, token usage and shadow MCP exposure.`)
+	fmt.Fprintln(os.Stderr, `    describe-mcp-server-health: Describes one MCP server's health: authentication configuration, session counts and tool call outcomes over a window (admin view, no auth scoping).`)
 	fmt.Fprintln(os.Stderr, `    list-registry-entries: Staff-only registry administration.`)
 	fmt.Fprintln(os.Stderr, `    get-registry-entry: Staff-only registry administration.`)
 	fmt.Fprintln(os.Stderr, `    create-registry-entry: Staff-only registry administration.`)
@@ -29910,6 +29925,32 @@ func adminGetSupportCoverageUsage() {
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
 	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "admin get-support-coverage --organization-id \"abc123\" --window-days 2 --admin-session-token \"abc123\"")
+}
+
+func adminDescribeMcpServerHealthUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] admin describe-mcp-server-health", os.Args[0])
+	fmt.Fprint(os.Stderr, " -organization-id STRING")
+	fmt.Fprint(os.Stderr, " -project-id STRING")
+	fmt.Fprint(os.Stderr, " -mcp-server-id STRING")
+	fmt.Fprint(os.Stderr, " -window-days INT")
+	fmt.Fprint(os.Stderr, " -admin-session-token STRING")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Describes one MCP server's health: authentication configuration, session counts and tool call outcomes over a window (admin view, no auth scoping).`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -organization-id STRING: `)
+	fmt.Fprintln(os.Stderr, `    -project-id STRING: `)
+	fmt.Fprintln(os.Stderr, `    -mcp-server-id STRING: `)
+	fmt.Fprintln(os.Stderr, `    -window-days INT: `)
+	fmt.Fprintln(os.Stderr, `    -admin-session-token STRING: `)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "admin describe-mcp-server-health --organization-id \"abc123\" --project-id \"550e8400-e29b-41d4-a716-446655440000\" --mcp-server-id \"550e8400-e29b-41d4-a716-446655440000\" --window-days 30 --admin-session-token \"abc123\"")
 }
 
 func adminListRegistryEntriesUsage() {
