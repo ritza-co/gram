@@ -40,7 +40,7 @@ func testServerHealth() *gen.AdminMcpServerHealth {
 	window := 14
 	return &gen.AdminMcpServerHealth{
 		Server:      &gen.AdminMcpServerHealthServer{ID: testHealthServerID, Name: "Example", Source: "remote", Visibility: "public", CreatedAt: "2026-01-01T00:00:00Z"},
-		Correlation: &gen.AdminMcpServerHealthCorrelation{URLSlug: "example", McpServerID: new(testHealthServerID), ToolsetSlug: new("example-toolset")},
+		Correlation: &gen.AdminMcpServerHealthCorrelation{URLSlug: new("example"), McpServerID: new(testHealthServerID), ToolsetSlug: new("example-toolset")},
 		UserSessionIssuer: &gen.AdminMcpServerHealthUserSessionIssuer{
 			ID: testHealthIssuerID, Slug: "example-issuer", Classification: "custom", AuthnChallengeMode: "interactive",
 			SessionDurationHours: 24, AttachmentScope: "project", ClientIDMetadataAdmissionMode: new("presets"),
@@ -136,7 +136,7 @@ func TestDescribeMCPServerHealthExactTargetAndProjection(t *testing.T) {
 	require.Equal(t, "org-a", output.OrganizationID)
 	require.Equal(t, testProjectID, output.ProjectID)
 	require.Equal(t, MCPServerHealthServer{ID: testHealthServerID, Name: "Example", Source: "remote", Visibility: "public", CreatedAt: "2026-01-01T00:00:00Z"}, output.Server)
-	require.Equal(t, "example", output.Correlation.URLSlug)
+	require.Equal(t, "example", *output.Correlation.URLSlug)
 	require.Nil(t, output.LegacyAuth)
 	require.NotNil(t, output.UserSessionIssuer)
 	require.Len(t, output.UserSessionIssuer.RemoteSessionClients, 2)
@@ -187,6 +187,18 @@ func TestDescribeMCPServerHealthLegacyAndLoggingDisabled(t *testing.T) {
 	require.Equal(t, "oauth_proxy", *output.LegacyAuth)
 	require.Nil(t, output.UserSessionIssuer)
 	require.Equal(t, MCPServerHealthToolCalls{Type: "logging:disabled"}, output.ToolCalls)
+}
+
+func TestDescribeMCPServerHealthWithoutURLSlug(t *testing.T) {
+	t.Parallel()
+	reads := testServerHealthReads()
+	reads.health.Correlation.URLSlug = nil
+	body, data, isError := callServerHealthTool(t, reads, nil, healthArgs(""))
+	require.False(t, isError, body)
+	var output MCPServerHealth
+	require.NoError(t, json.Unmarshal(data, &output))
+	require.Nil(t, output.Correlation.URLSlug)
+	require.NotContains(t, string(data), "url_slug")
 }
 
 func TestDescribeMCPServerHealthRejectsInexactTargets(t *testing.T) {
@@ -247,7 +259,8 @@ func TestDescribeMCPServerHealthFailsClosedOnMalformedResults(t *testing.T) {
 		"unknown source":       func(h *gen.AdminMcpServerHealth) { h.Server.Source = "other" },
 		"long name":            func(h *gen.AdminMcpServerHealth) { h.Server.Name = long },
 		"bad created_at":       func(h *gen.AdminMcpServerHealth) { h.Server.CreatedAt = "yesterday" },
-		"empty url slug":       func(h *gen.AdminMcpServerHealth) { h.Correlation.URLSlug = "" },
+		"empty url slug":       func(h *gen.AdminMcpServerHealth) { h.Correlation.URLSlug = new("") },
+		"long url slug":        func(h *gen.AdminMcpServerHealth) { h.Correlation.URLSlug = new(long) },
 		"legacy with issuer":   func(h *gen.AdminMcpServerHealth) { h.LegacyAuth = new("gram_private") },
 		"unknown legacy":       func(h *gen.AdminMcpServerHealth) { h.UserSessionIssuer = nil; h.LegacyAuth = new("basic") },
 		"unknown tool calls":   func(h *gen.AdminMcpServerHealth) { h.ToolCalls.Type = "logging:partial" },
