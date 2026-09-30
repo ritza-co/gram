@@ -1,5 +1,30 @@
 # server
 
+## 2.15.0
+
+### Minor Changes
+
+- 3aec030: MCP server settings no longer show an attached identity provider as missing when the platform catalog is large. The identity provider picker now searches on the server and loads more on demand, and the issuer listing accepts `search` and `upstream_host` filters.
+- 4d02f1b: The Identity provider menu on remote MCP server settings is searchable and lists each tier (project, organization, platform) with its own "more" row, so every provider can be picked however large the platform catalog grows. The Remote Identity Providers page lists the organization's own providers in full and pages the platform catalog separately. Both issuer listings accept a `tier` filter.
+- 8adb1c6: Show and edit a remote identity provider's scope override, warn wherever a client's scopes are edited that the override makes them inert, and let platform admins see, toggle and migrate remote session clients that run in compatibility mode with the legacy callback URL.
+- 1afaeeb: Risk Events and Watchdog show findings from MCP tool calls with their server, tool, outcome and user instead of an untitled session.
+- e0aa320: MCP-scoped risk policies can now target Gram's built-in Platform MCP toolsets and their tools.
+- b0e113c: Let Watchdog signals be filtered by MCP server, report the servers and tools each signal was observed on, and add per-server finding counts for the MCP server filter pickers.
+  
+  Also lets the Platform MCP `list_risk_findings` tool filter by MCP server.
+
+### Patch Changes
+
+- 4c71540: Add two Platform MCP tools for skill insights: `list_skill_insights` ranks a project's skills by activations, sampled efficacy, session cost, and estimated time saved, and `compare_skill_versions` breaks those same numbers down across one skill's versions. Deployments without ClickHouse keep both tools registered as stubs.
+- 96aec8a: Serve the hooks@0.3.31 binary to hook installations. Previously pinned releases stay available so installations that have not regenerated their bootstrap script can still install.
+- bebb567: Private network cleanup keeps retrying through longer outages, and shows "Cleanup blocked" with next steps when Tailscale rejects the saved OAuth client instead of staying on "Cleaning up" indefinitely.
+- e8e8f96: Gram now works end to end on extra platform hosts such as `ai.speakeasy.com`. Platform MCP advertises, issues, and accepts tokens for the host it is used on. The MCP install page login, the Stripe billing portal, and Polar checkout return to that host. Tunneled MCP agent setup shows the real tunnel gateway, the explore demo link stays on the current host, and the custom domain CNAME fallback points at the right target.
+- b385d01: More of Gram now follows the platform host you use it on, such as `ai.speakeasy.com`. Stripe Checkout returns you to the host you started on. Slack unfurls dashboard links on every platform host, and new Slack apps register all first-party hosts as unfurl domains. Agent setup copy (OTLP endpoints and domain allowlists) names the host you are on, and allowlists keep `app.getgram.ai` where plugin hooks and the device agent still send.
+- 8702e87: Adding MCP servers through the Platform MCP no longer stops at five per project, including servers that were later deleted.
+- 7ada033: The "Request access" links in MCP server and Platform MCP access-denied errors now point at the platform host the request came in on (such as `ai.speakeasy.com`), so users land on a host where they are already signed in.
+- 61161fd: Risk Events now keeps showing findings from disabled policies, marked inactive, so turning a policy off no longer empties the page. Findings from MCP-scoped policies now always appear, including locally.
+- b28cacd: Stop PR preview workers from taking over the development environment's background schedules, which could stall jobs such as outbox publishing.
+
 ## 2.14.0
 
 ### Minor Changes
